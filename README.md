@@ -42,6 +42,10 @@
    - 游戏时长可自由选择（1-60分钟）
    - 音效开关可控制
 
+<img width="1202" height="832" alt="开始界面" src="https://github.com/user-attachments/assets/a4b6d73b-df6f-4515-ad68-a29cdd9bf2fb" />
+<img width="1202" height="832" alt="游戏界面" src="https://github.com/user-attachments/assets/3064cf46-f9fa-45e7-9cd5-21874ef61415" />
+
+
 ---
 
 ## 🎮 游戏玩法
