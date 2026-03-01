@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> 🎮 一款让小朋友在游戏中轻松学习10以内加减法的益智教育游戏
+> 🎮 一款让小朋友在游戏中轻松学习20以内加减法的益智教育游戏
 
 ---
 
