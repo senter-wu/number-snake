@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NUM SNAKE v2 | 数字贪吃蛇</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+        body { font-family: 'Rajdhani', sans-serif; background: #0d0d12; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse at 30% 20%, rgba(255,0,128,0.15) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(0,245,255,0.12) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+        body::after { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px); pointer-events: none; z-index: 999; }
+        .container { position: relative; z-index: 1; padding: 30px; width: 100%; max-width: 1400px; display: flex; flex-direction: column; align-items: center; }
+        .header { text-align: center; margin-bottom: 35px; }
+        .title { font-family: 'Orbitron', monospace; font-size: 3.8rem; font-weight: 900; letter-spacing: 0.18em; background: linear-gradient(135deg, #ff0080, #00f5ff, #ff6a00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 25px rgba(0,245,255,0.5)); animation: glow 2s ease-in-out infinite alternate; }
+        @keyframes glow { from { filter: drop-shadow(0 0 15px rgba(0,245,255,0.4)); } to { filter: drop-shadow(0 0 35px rgba(255,0,128,0.6)); } }
+        .subtitle { font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; color: rgba(255,255,255,0.35); letter-spacing: 0.45em; margin-top: 10px; }
+        .game-info { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-bottom: 35px; width: 100%; }
+        .info-panel { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px 30px; min-width: 170px; text-align: center; backdrop-filter: blur(20px); transition: all 0.4s; }
+        .info-panel:hover { transform: translateY(-5px) scale(1.02); }
+        .info-panel .label { font-size: 0.72rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 8px; font-weight: 500; }
+        .info-panel .value { font-family: 'Orbitron', monospace; font-size: 2.1rem; font-weight: 700; }
+        .target-panel .value { color: #00f5ff; text-shadow: 0 0 25px rgba(0,245,255,0.6); font-size: 2.4rem; }
+        .op-panel .value { color: #ff0080; text-shadow: 0 0 20px rgba(255,0,128,0.5); font-size: 2.4rem; }
+        .score-panel .value { color: #00ff88; text-shadow: 0 0 20px rgba(0,255,136,0.5); }
+        .round-panel .value { color: #ffff00; text-shadow: 0 0 20px rgba(255,255,0,0.5); }
+        .time-panel .value { color: #ff6a00; text-shadow: 0 0 20px rgba(255,106,0,0.5); font-family: 'Share Tech Mono'; }
+        .game-area { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; justify-content: center; width: 100%; }
+        .game-area > * { margin: 0; }
+        .canvas-wrapper { position: relative; border-radius: 20px; overflow: hidden; box-shadow: 0 0 0 2px rgba(0,245,255,0.3), 0 0 30px rgba(0,245,255,0.2), inset 0 0 80px rgba(0,0,0,0.5); flex-shrink: 0; }
+        .side-panel { display: flex; flex-direction: column; gap: 15px; min-width: 280px; flex: 1; max-width: 320px; }
+        #gameCanvas { display: block; background: rgba(0,0,0,0.92); border-radius: 18px; }
+        .start-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,5,8,0.94); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; border-radius: 18px; }
+        .start-screen.hidden { display: none; }
+        .start-title { font-family: 'Orbitron', monospace; font-size: 2.1rem; background: linear-gradient(135deg, #ff0080, #00f5ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 22px; }
+        .start-hint { font-family: 'Share Tech Mono', monospace; color: rgba(255,255,255,0.32); animation: blink 2s ease-in-out infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .panel { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 24px; backdrop-filter: blur(20px); display: block !important; }
+        #gamePanel { display: none; }
+        #gamePanel.active { display: block !important; }
+        .panel-title { font-family: 'Orbitron', monospace; font-size: 0.88rem; color: #00f5ff; letter-spacing: 0.12em; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .dur-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .dur-btn { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 0.92rem; padding: 14px 18px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: linear-gradient(135deg, rgba(0,245,255,0.08), rgba(255,0,128,0.05)); color: #fff; cursor: pointer; transition: all 0.3s; }
+        .dur-btn:hover { border-color: #00f5ff; box-shadow: 0 0 25px rgba(0,245,255,0.3); transform: translateY(-2px); }
+        .custom-dur { display: flex; gap: 8px; margin-top: 14px; align-items: center; }
+        .custom-dur input { width: 75px; padding: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(0,0,0,0.4); color: #fff; font-family: 'Orbitron', monospace; font-size: 0.88rem; text-align: center; }
+        .custom-dur input:focus { outline: none; border-color: #00f5ff; }
+        .custom-dur span { color: rgba(255,255,255,0.4); font-size: 0.78rem; }
+        .custom-dur button { flex: 1; padding: 12px; border: 1px solid #00ff88; border-radius: 10px; background: rgba(0,255,136,0.15); color: #00ff88; font-family: 'Rajdhani', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .custom-dur button:hover { background: #00ff88; color: #000; }
+        .collected-display { display: flex !important; justify-content: center; gap: 25px; margin: 18px 0; visibility: visible; }
+        .num-orb { width: 85px; height: 85px; border-radius: 50%; display: flex !important; align-items: center; justify-content: center; font-family: 'Orbitron', monospace; font-size: 2.5rem; font-weight: 700; transition: all 0.4s; border: 3px solid #fff; background: rgba(255,255,255,0.1); visibility: visible; }
+        .num-orb.collected { background: linear-gradient(135deg, #ffdd00, #ff8800); color: #000; box-shadow: 0 0 40px #ffdd00, inset 0 0 20px rgba(255,255,255,0.6); border-color: #ffdd00; animation: orbPulse 0.8s infinite; }
+        @keyframes orbPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .num-orb.empty { background: rgba(255,255,255,0.1); border: 3px dashed rgba(255,255,255,0.5); color: rgba(255,255,255,0.7); }
+        .result-msg { text-align: center; padding: 14px; border-radius: 12px; font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; margin-top: 12px; display: none; animation: slideIn 0.4s; }
+        .result-msg.show { display: block; }
+        .result-msg.correct { background: rgba(0,255,136,0.2); border: 1px solid #00ff88; color: #00ff88; }
+        .result-msg.wrong { background: rgba(255,0,128,0.2); border: 1px solid #ff0080; color: #ff0080; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
+        .ctrl-grid { display: grid; grid-template-columns: auto auto; gap: 10px 20px; font-size: 0.78rem; }
+        .ctrl-grid kbd { font-family: 'Share Tech Mono', monospace; background: rgba(0,245,255,0.1); border: 1px solid rgba(0,245,255,0.25); border-radius: 6px; padding: 4px 10px; color: #00f5ff; font-size: 0.72rem; }
+        .ctrl-grid span { color: rgba(255,255,255,0.5); }
+        .sound-toggle { position: fixed; top: 25px; right: 25px; width: 50px; height: 50px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.025); color: #00f5ff; font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 100; }
+        .sound-toggle:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(0,245,255,0.5); }
+        .pause-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,5,8,0.92); display: none; align-items: center; justify-content: center; z-index: 998; }
+        .pause-overlay.show { display: flex; }
+        .pause-content { text-align: center; }
+        .pause-text { font-family: 'Orbitron', monospace; font-size: 4.2rem; font-weight: 900; background: linear-gradient(135deg, #00f5ff, #ff0080); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: blink 1s infinite; }
+        .pause-hint { font-family: 'Share Tech Mono', monospace; color: rgba(255,255,255,0.4); margin-top: 25px; }
+        .game-over-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,5,8,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .game-over-overlay.show { display: flex; }
+        .game-over-content { text-align: center; padding: 60px; background: rgba(255,255,255,0.025); border: 2px solid #ff0080; border-radius: 30px; box-shadow: 0 0 80px rgba(255,0,128,0.3); animation: zoomIn 0.5s; }
+        @keyframes zoomIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .game-over-title { font-family: 'Orbitron', monospace; font-size: 2.8rem; font-weight: 900; background: linear-gradient(135deg, #ff0080, #ff6a00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 35px; }
+        .final-score-label { font-size: 1.05rem; color: rgba(255,255,255,0.5); }
+        .final-score { font-family: 'Orbitron', monospace; font-size: 5.2rem; font-weight: 900; color: #00ff88; text-shadow: 0 0 50px rgba(0,255,136,0.6); margin: 20px 0; }
+        .final-rounds { font-family: 'Share Tech Mono', monospace; color: rgba(255,255,255,0.4); margin-bottom: 35px; }
+        .restart-btn { font-family: 'Orbitron', monospace; font-size: 1.05rem; padding: 18px 50px; border: 2px solid #00f5ff; border-radius: 35px; background: transparent; color: #00f5ff; cursor: pointer; transition: all 0.3s; }
+        .restart-btn:hover { background: #00f5ff; color: #000; box-shadow: 0 0 40px rgba(0,245,255,0.6); }
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .title { font-size: 2rem; }
+            .game-area { flex-direction: column; }
+            .canvas-wrapper { width: 100%; max-width: 400px; }
+            #gameCanvas { width: 100%; height: auto; }
+            .side-panel { width: 100%; max-width: 400px; }
+            .info-panel { min-width: 110px; padding: 14px; }
+            .info-panel .value { font-size: 1.5rem; }
+            .num-orb { width: 70px; height: 70px; font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <button class="sound-toggle" id="soundToggle">🔊</button>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">NUM SNAKE</h1>
+            <p class="subtitle">数字贪吃蛇 · 益智数学游戏</p>
+        </header>
+        <div class="game-info">
+            <div class="info-panel target-panel"><div class="label">🎯 目标</div><div class="value" id="targetNum">?</div></div>
+            <div class="info-panel op-panel"><div class="label">🔢 运算</div><div class="value" id="operation">+</div></div>
+            <div class="info-panel score-panel"><div class="label">⭐ 得分</div><div class="value" id="score">0</div></div>
+            <div class="info-panel round-panel"><div class="label">🎮 回合</div><div class="value" id="round">1</div></div>
+            <div class="info-panel time-panel"><div class="label">⏱️ 剩余</div><div class="value" id="timeLeft">--:--</div></div>
+        </div>
+        <div class="game-area">
+            <div class="canvas-wrapper">
+                <canvas id="gameCanvas" width="700" height="560"></canvas>
+                <div class="start-screen" id="startScreen"><div class="start-title">🐍 NUM SNAKE 🐍</div><div class="start-hint">选择游戏时长开始</div></div>
+            </div>
+            <div class="side-panel">
+                <div class="panel" id="startPanel">
+                    <div class="panel-title">⚡ 游戏设置</div>
+                    <div class="dur-btns">
+                        <button class="dur-btn" onclick="startGame(1)">1 分钟</button>
+                        <button class="dur-btn" onclick="startGame(3)">3 分钟</button>
+                        <button class="dur-btn" onclick="startGame(5)">5 分钟</button>
+                        <button class="dur-btn" onclick="startGame(10)">10 分钟</button>
+                    </div>
+                    <div class="custom-dur">
+                        <input type="number" id="customTime" min="1" max="60" placeholder="1-60">
+                        <span>分钟</span>
+                        <button onclick="startCustomGame()">开始</button>
+                    </div>
+                </div>
+                <div class="panel" id="gamePanel">
+                    <div class="panel-title">📊 当前收集</div>
+                    <div class="collected-display">
+                        <div class="num-orb empty" id="num1">?</div>
+                        <div class="num-orb empty" id="num2">?</div>
+                    </div>
+                    <div class="result-msg" id="resultMessage"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">⌨️ 操作说明</div>
+                    <div class="ctrl-grid">
+                        <kbd>↑↓←→</kbd><span>方向控制</span>
+                        <kbd>WASD</kbd><span>方向控制</span>
+                        <kbd>空格</kbd><span>暂停</span>
+                        <kbd>R</kbd><span>重新开始</span>
+                        <kbd>M</kbd><span>音效</span>
+                        <kbd>ESC</kbd><span>退出</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pause-overlay" id="pauseOverlay"><div class="pause-content"><div class="pause-text">⏸ PAUSED</div><div class="pause-hint">按空格继续</div></div></div>
+    <div class="game-over-overlay" id="gameOverOverlay">
+        <div class="game-over-content">
+            <div class="game-over-title">GAME OVER</div>
+            <div class="final-score-label">最终得分</div>
+            <div class="final-score" id="finalScore">0</div>
+            <div class="final-rounds">完成回合: <span id="finalRound">0</span></div>
+            <button class="restart-btn" onclick="showStartPanel()">再来一局</button>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const GRID_SIZE = 20, CELL_SIZE = 35, CANVAS_WIDTH = 700, CANVAS_HEIGHT = 560;
+            let canvas, ctx, snake = [], direction = { x: 1, y: 0 }, nextDirection = { x: 1, y: 0 }, numbers = [], collectedNumbers = [], targetNumber = 0, operation = '+', score = 0, round = 1, gameTime = 0, timeLeft = 0, gameRunning = false, gamePaused = false, gameInterval = null, timeInterval = null, soundEnabled = true, audioCtx = null, storedMinutes = 0, snakeLength = 3;
+
+            // 复用 AudioContext
+            function getAudioContext() {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                return audioCtx;
+            }
+
+            window.onload = function() {
+                canvas = document.getElementById('gameCanvas');
+                ctx = canvas.getContext('2d');
+                document.addEventListener('keydown', handleKeyDown);
+                document.getElementById('soundToggle').addEventListener('click', toggleSound);
+                // 触摸控制
+                let touchStartX, touchStartY;
+                canvas.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; });
+                canvas.addEventListener('touchend', function(e) {
+                    if (!gameRunning || gamePaused) return;
+                    const dx = e.changedTouches[0].clientX - touchStartX;
+                    const dy = e.changedTouches[0].clientY - touchStartY;
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        if (dx > 30 && direction.x !== -1) nextDirection = { x: 1, y: 0 };
+                        else if (dx < -30 && direction.x !== 1) nextDirection = { x: -1, y: 0 };
+                    } else {
+                        if (dy > 30 && direction.y !== -1) nextDirection = { x: 0, y: 1 };
+                        else if (dy < -30 && direction.y !== 1) nextDirection = { x: 0, y: -1 };
+                    }
+                });
+                drawStartScreen();
+            };
+
+            function drawStartScreen() {
+                ctx.fillStyle = 'rgba(5,5,8,0.98)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.strokeStyle = 'rgba(0,245,255,0.04)';
+                for (let i = 0; i <= CANVAS_WIDTH / CELL_SIZE; i++) { ctx.beginPath(); ctx.moveTo(i * CELL_SIZE, 0); ctx.lineTo(i * CELL_SIZE, CANVAS_HEIGHT); ctx.stroke(); }
+                for (let i = 0; i <= CANVAS_HEIGHT / CELL_SIZE; i++) { ctx.beginPath(); ctx.moveTo(0, i * CELL_SIZE); ctx.lineTo(CANVAS_WIDTH, i * CELL_SIZE); ctx.stroke(); }
+            }
+
+            function startGame(minutes, isRestart) {
+                storedMinutes = minutes || storedMinutes || 1;
+                gameTime = storedMinutes * 60;
+                timeLeft = gameTime;
+                score = 0;
+                round = 1;
+                collectedNumbers = [];
+                snake = [{ x: 5, y: 10 }, { x: 4, y: 10 }, { x: 3, y: 10 }];
+                snakeLength = 3; // 初始长度为3
+                direction = { x: 1, y: 0 };
+                nextDirection = { x: 1, y: 0 };
+                generateNewRound();
+                numbers = [];
+                for (let i = 0; i < 8; i++) spawnNumber();
+                document.getElementById('startScreen').classList.add('hidden');
+                document.getElementById('startPanel').style.display = 'none';
+                document.getElementById('gamePanel').classList.add('active');
+                document.getElementById('gameOverOverlay').classList.remove('show');
+                updateUI();
+                gameRunning = true;
+                gamePaused = false;
+                if (gameInterval) clearInterval(gameInterval);
+                // 难度递增：速度随回合数加快，最慢250ms，最快120ms
+                const speed = Math.max(200, 400 - round * 5);
+                gameInterval = setInterval(gameLoop, speed);
+                if (timeInterval) clearInterval(timeInterval);
+                timeInterval = setInterval(updateTime, 1000);
+                playSound('start');
+            }
+
+            function startCustomGame() {
+                const t = parseInt(document.getElementById('customTime').value);
+                if (t >= 1 && t <= 60) startGame(t);
+                else alert('请输入1-60之间的数字！');
+            }
+
+            function showStartPanel() {
+                gameRunning = false;
+                gamePaused = false;
+                clearInterval(gameInterval);
+                clearInterval(timeInterval);
+                document.getElementById('startScreen').classList.remove('hidden');
+                document.getElementById('startPanel').style.display = 'block';
+                document.getElementById('gamePanel').classList.remove('active');
+                document.getElementById('gameOverOverlay').classList.remove('show');
+                drawStartScreen();
+            }
+
+            // 验证是否存在可解组合
+            function hasValidSolution() {
+                const values = numbers.map(n => n.value);
+                // 检查任意两个数字的组合是否能得到目标
+                for (let i = 0; i < values.length; i++) {
+                    for (let j = i + 1; j < values.length; j++) {
+                        if (operation === '+' && values[i] + values[j] === targetNumber) return true;
+                        if (operation === '-' && Math.abs(values[i] - values[j]) === targetNumber) return true;
+                    }
+                }
+                return false;
+            }
+
+            function generateNewRound() {
+                // 难度递增：目标范围随回合数增大
+                const targetMax = Math.min(15 + round, 30);
+                // 数字范围随回合数增大
+                const numMax = Math.min(10 + Math.floor(round / 5), 12);
+
+                // 多重验证确保有解
+                let attempts = 0;
+                let success = false;
+
+                while (!success && attempts < 100) {
+                    attempts++;
+
+                    // 先决定运算符号，确保目标可达
+                    if (Math.random() > 0.5) {
+                        // 加法：目标至少为2（1+1=2）
+                        operation = '+';
+                        targetNumber = Math.floor(Math.random() * (targetMax - 1)) + 2;
+                    } else {
+                        // 减法：目标至少为1
+                        operation = '-';
+                        targetNumber = Math.floor(Math.random() * targetMax) + 1;
+                    }
+
+                    // 确保一定存在可解组合：先生成解法数字
+                    let num1, num2;
+                    if (operation === '+') {
+                        // 加法：随机分成两个数字（两个数都至少为1）
+                        num1 = Math.floor(Math.random() * (targetNumber - 1)) + 1;
+                        num2 = targetNumber - num1;
+                    } else {
+                        // 减法：生成两个数字使得差等于目标（num1 > num2）
+                        // 确保num2在有效范围内
+                        const maxDiff = Math.min(numMax - targetNumber, numMax - 1);
+                        if (maxDiff < 1) continue; // 无法生成有效的减法
+                        num2 = Math.floor(Math.random() * maxDiff) + 1;
+                        num1 = targetNumber + num2;
+                    }
+
+                    // 确保生成的数字在有效范围内
+                    if (num1 < 1 || num1 > numMax || num2 < 1 || num2 > numMax) continue;
+
+                    // 将解法数字加入场景
+                    const solutionNums = [num1, num2];
+                    // 随机打乱顺序
+                    solutionNums.sort(() => Math.random() - 0.5);
+
+                    // 清除旧数字，重新生成包含解法的数字
+                    numbers = [];
+                    // 先放入解法数字
+                    solutionNums.forEach(n => spawnNumberWithValue(n));
+                    // 补齐其他随机数字
+                    for (let i = numbers.length; i < 8; i++) {
+                        spawnNumberWithValue(Math.floor(Math.random() * numMax) + 1);
+                    }
+
+                    // 验证是否存在可解组合
+                    if (hasValidSolution()) {
+                        success = true;
+                    }
+                }
+
+                if (!success) {
+                    // 如果多次尝试都失败，强制生成一个保证有解的情况
+                    operation = '+';
+                    targetNumber = Math.floor(Math.random() * (targetMax - 1)) + 2;
+                    num1 = Math.floor(Math.random() * (targetNumber - 1)) + 1;
+                    num2 = targetNumber - num1;
+                    numbers = [];
+                    spawnNumberWithValue(num1);
+                    spawnNumberWithValue(num2);
+                    for (let i = numbers.length; i < 8; i++) {
+                        spawnNumberWithValue(Math.floor(Math.random() * numMax) + 1);
+                    }
+                }
+
+                collectedNumbers = [];
+                updateUI();
+            }
+
+            function spawnNumberWithValue(value) {
+                let x, y, valid = false;
+                while (!valid) {
+                    x = Math.floor(Math.random() * (CANVAS_WIDTH / CELL_SIZE));
+                    y = Math.floor(Math.random() * (CANVAS_HEIGHT / CELL_SIZE));
+                    valid = !snake.some(s => s.x === x && s.y === y);
+                    if (valid) valid = !numbers.some(n => n.x === x && n.y === y);
+                }
+                const colorIndex = (value - 1) % 10;
+                numbers.push({ x, y, value: value, color: ['#00f5ff', '#ff00ff', '#00ff88', '#ffff00', '#ff0080', '#0066ff', '#ff6a00', '#cc00ff', '#00ccff', '#ffcc00'][colorIndex] });
+            }
+
+            function spawnNumber() {
+                let x, y, valid = false;
+                while (!valid) {
+                    x = Math.floor(Math.random() * (CANVAS_WIDTH / CELL_SIZE));
+                    y = Math.floor(Math.random() * (CANVAS_HEIGHT / CELL_SIZE));
+                    valid = !snake.some(s => s.x === x && s.y === y);
+                    if (valid) valid = !numbers.some(n => n.x === x && n.y === y);
+                }
+                // 难度递增：数字范围随回合数增大
+                const numMax = Math.min(10 + Math.floor(round / 3), 15);
+                const num = Math.floor(Math.random() * numMax) + 1;
+                numbers.push({ x, y, value: num, color: ['#00f5ff', '#ff00ff', '#00ff88', '#ffff00', '#ff0080', '#0066ff', '#ff6a00', '#cc00ff', '#00ccff', '#ffcc00'][num - 1] });
+            }
+
+            function gameLoop() {
+                if (!gameRunning || gamePaused) return;
+                direction = { ...nextDirection };
+                const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+                // 撞墙处理：转向而不是游戏结束
+                if (head.x < 0 || head.x >= CANVAS_WIDTH / CELL_SIZE || head.y < 0 || head.y >= CANVAS_HEIGHT / CELL_SIZE) {
+                    // 随机选择：原路返回 或 向左/向右转
+                    const rand = Math.random();
+                    if (rand < 0.4) {
+                        // 原路返回
+                        direction = { x: -direction.x, y: -direction.y };
+                    } else {
+                        // 随机向左或向右转（垂直方向）
+                        if (direction.x !== 0) {
+                            direction = { x: 0, y: Math.random() < 0.5 ? -1 : 1 };
+                        } else {
+                            direction = { x: Math.random() < 0.5 ? -1 : 1, y: 0 };
+                        }
+                    }
+                    nextDirection = { ...direction };
+                    // 重新计算头部位置
+                    head.x = snake[0].x + direction.x;
+                    head.y = snake[0].y + direction.y;
+                    // 如果转向后仍然撞墙，直接结束（防止卡住）
+                    if (head.x < 0 || head.x >= CANVAS_WIDTH / CELL_SIZE || head.y < 0 || head.y >= CANVAS_HEIGHT / CELL_SIZE) {
+                        gameOver();
+                        return;
+                    }
+                }
+                if (snake.some(s => s.x === head.x && s.y === head.y)) { gameOver(); return; }
+                snake.unshift(head);
+                const eatenIndex = numbers.findIndex(n => n.x === head.x && n.y === head.y);
+                if (eatenIndex !== -1) {
+                    const eatenNum = numbers[eatenIndex];
+                    numbers.splice(eatenIndex, 1);
+                    collectedNumbers.push(eatenNum.value);
+                    // 不再生成新数字，气泡一次性出现
+                    playSound('eat');
+                    updateUI(); // 立即更新UI显示收集到的数字
+                    if (collectedNumbers.length === 2) checkResult();
+                }
+                // 根据snakeLength调整蛇身长度
+                while (snake.length > snakeLength) snake.pop();
+                while (snake.length < snakeLength) {
+                    // 如果蛇身太短，复制倒数第二节来延长
+                    if (snake.length >= 2) {
+                        snake.push({ ...snake[snake.length - 1] });
+                    } else {
+                        snake.push({ ...snake[snake.length - 1] });
+                    }
+                }
+                draw();
+            }
+
+            function checkResult() {
+                const num1 = collectedNumbers[0], num2 = collectedNumbers[1], result = operation === '+' ? num1 + num2 : num1 - num2;
+                const resultEl = document.getElementById('resultMessage');
+                if (result === targetNumber) {
+                    score += 1 + Math.floor(round / 5); // 难度加成
+                    snakeLength++; // 回答正确，蛇身变长一格
+                    resultEl.className = 'result-msg show correct';
+                    resultEl.textContent = '✓ ' + num1 + ' ' + operation + ' ' + num2 + ' = ' + result + ' = ' + targetNumber + ' (长度+1)';
+                    playSound('correct');
+                    round++;
+                    // 更新游戏速度
+                    const speed = Math.max(200, 400 - round * 5);
+                    clearInterval(gameInterval);
+                    gameInterval = setInterval(gameLoop, speed);
+                    setTimeout(function() { generateNewRound(); resultEl.className = 'result-msg'; }, 1500);
+                } else {
+                    score -= 1;
+                    snakeLength = Math.max(3, snakeLength - 1); // 回答错误，蛇身缩短一格，最少3格
+                    resultEl.className = 'result-msg show wrong';
+                    resultEl.textContent = '✗ ' + num1 + ' ' + operation + ' ' + num2 + ' = ' + result + ' ≠ ' + targetNumber + ' (长度-1) 再试一次!';
+                    playSound('wrong');
+                    // 错误时不增加轮次，重新生成数字（保持相同目标和运算）
+                    setTimeout(function() { regenerateSameRound(); resultEl.className = 'result-msg'; }, 1500);
+                }
+                updateUI();
+            }
+
+            function regenerateSameRound() {
+                // 保持相同的目标和运算，重新生成数字
+                // 确保一定存在可解组合
+                let num1, num2;
+                if (operation === '+') {
+                    num1 = Math.floor(Math.random() * targetNumber) + 1;
+                    num2 = targetNumber - num1;
+                } else {
+                    num2 = Math.floor(Math.random() * targetNumber) + 1;
+                    num1 = targetNumber + num2;
+                }
+                const solutionNums = [num1, num2];
+                solutionNums.sort(() => Math.random() - 0.5);
+                numbers = [];
+                solutionNums.forEach(n => spawnNumberWithValue(n));
+                const numMax = Math.min(10 + Math.floor(round / 5), 12);
+                for (let i = numbers.length; i < 8; i++) {
+                    spawnNumberWithValue(Math.floor(Math.random() * numMax) + 1);
+                }
+                collectedNumbers = [];
+                updateUI();
+            }
+
+            function draw() {
+                ctx.fillStyle = 'rgba(5,5,8,0.98)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.strokeStyle = 'rgba(0,245,255,0.03)';
+                for (let i = 0; i <= CANVAS_WIDTH / CELL_SIZE; i++) { ctx.beginPath(); ctx.moveTo(i * CELL_SIZE, 0); ctx.lineTo(i * CELL_SIZE, CANVAS_HEIGHT); ctx.stroke(); }
+                for (let i = 0; i <= CANVAS_HEIGHT / CELL_SIZE; i++) { ctx.beginPath(); ctx.moveTo(0, i * CELL_SIZE); ctx.lineTo(CANVAS_WIDTH, i * CELL_SIZE); ctx.stroke(); }
+                numbers.forEach(function(n) {
+                    // 绘制圆形背景
+                    ctx.fillStyle = n.color;
+                    ctx.beginPath();
+                    ctx.arc(n.x * CELL_SIZE + CELL_SIZE / 2, n.y * CELL_SIZE + CELL_SIZE / 2, 14, 0, Math.PI * 2);
+                    ctx.fill();
+                    // 绘制数字，添加描边使更清晰
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 16px Orbitron';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.strokeText(n.value, n.x * CELL_SIZE + CELL_SIZE / 2, n.y * CELL_SIZE + CELL_SIZE / 2);
+                    ctx.fillText(n.value, n.x * CELL_SIZE + CELL_SIZE / 2, n.y * CELL_SIZE + CELL_SIZE / 2);
+                });
+                snake.forEach(function(s, i) {
+                    const isHead = i === 0;
+                    // 蛇身颜色：头部亮黄，渐变到尾部深橙，对比明显
+                    let bodyColor;
+                    if (isHead) {
+                        bodyColor = '#FFFF00'; // 亮黄色头部
+                    } else if (i <= 3) {
+                        bodyColor = '#FFAA00'; // 前3节橙色
+                    } else {
+                        bodyColor = '#FF6600'; // 后面的深橙色
+                    }
+                    ctx.fillStyle = bodyColor;
+                    ctx.beginPath();
+                    ctx.roundRect(s.x * CELL_SIZE + 2, s.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4, 8);
+                    ctx.fill();
+                    if (isHead) {
+                        ctx.fillStyle = '#fff';
+                        const eyeOffset = direction.x !== 0 ? 5 : 8;
+                        ctx.beginPath();
+                        ctx.arc(s.x * CELL_SIZE + CELL_SIZE / 2 - 5 + direction.y * eyeOffset, s.y * CELL_SIZE + CELL_SIZE / 2 - 5 + direction.x * eyeOffset, 3, 0, Math.PI * 2);
+                        ctx.arc(s.x * CELL_SIZE + CELL_SIZE / 2 + 5 + direction.y * eyeOffset, s.y * CELL_SIZE + CELL_SIZE / 2 + 5 + direction.x * eyeOffset, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+            }
+
+            function updateUI() {
+                document.getElementById('targetNum').textContent = targetNumber || '?';
+                document.getElementById('operation').textContent = operation;
+                document.getElementById('score').textContent = score;
+                document.getElementById('round').textContent = round;
+                const n1 = document.getElementById('num1'), n2 = document.getElementById('num2');
+                if (collectedNumbers.length >= 1) { n1.textContent = collectedNumbers[0]; n1.classList.remove('empty'); n1.classList.add('collected'); }
+                else { n1.textContent = '?'; n1.classList.add('empty'); n1.classList.remove('collected'); }
+                if (collectedNumbers.length >= 2) { n2.textContent = collectedNumbers[1]; n2.classList.remove('empty'); n2.classList.add('collected'); }
+                else { n2.textContent = '?'; n2.classList.add('empty'); n2.classList.remove('collected'); }
+            }
+
+            function updateTime() {
+                if (!gameRunning) return;
+                if (gamePaused) return; // 暂停时停止计时
+                timeLeft--;
+                const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+                document.getElementById('timeLeft').textContent = m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+                if (timeLeft <= 0) gameOver();
+            }
+
+            function gameOver() {
+                gameRunning = false;
+                clearInterval(gameInterval);
+                clearInterval(timeInterval);
+                playSound('over');
+                document.getElementById('finalScore').textContent = score;
+                document.getElementById('finalRound').textContent = round;
+                document.getElementById('gameOverOverlay').classList.add('show');
+            }
+
+            function handleKeyDown(e) {
+                if (!gameRunning) { if (e.key === 'Escape') showStartPanel(); return; }
+                switch (e.key) {
+                    case 'ArrowUp': case 'w': case 'W': if (direction.y !== 1) nextDirection = { x: 0, y: -1 }; e.preventDefault(); break;
+                    case 'ArrowDown': case 's': case 'S': if (direction.y !== -1) nextDirection = { x: 0, y: 1 }; e.preventDefault(); break;
+                    case 'ArrowLeft': case 'a': case 'A': if (direction.x !== 1) nextDirection = { x: -1, y: 0 }; e.preventDefault(); break;
+                    case 'ArrowRight': case 'd': case 'D': if (direction.x !== -1) nextDirection = { x: 1, y: 0 }; e.preventDefault(); break;
+                    case ' ': togglePause(); e.preventDefault(); break;
+                    case 'r': case 'R': startGame(null, true); break;
+                    case 'm': case 'M': toggleSound(); break;
+                    case 'Escape': gameOver(); break;
+                }
+            }
+
+            function togglePause() {
+                gamePaused = !gamePaused;
+                document.getElementById('pauseOverlay').classList.toggle('show', gamePaused);
+            }
+            function toggleSound() { soundEnabled = !soundEnabled; document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇'; }
+
+            function playSound(type) {
+                if (!soundEnabled) return;
+                try {
+                    const AC = getAudioContext();
+                    const osc = AC.createOscillator();
+                    const gain = AC.createGain();
+                    osc.connect(gain);
+                    gain.connect(AC.destination);
+                    switch (type) {
+                        case 'start': osc.frequency.value = 440; gain.gain.setValueAtTime(0.2, AC.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 0.3); osc.start(AC.currentTime); osc.stop(AC.currentTime + 0.3); break;
+                        case 'eat': osc.frequency.value = 600; gain.gain.setValueAtTime(0.15, AC.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 0.1); osc.start(AC.currentTime); osc.stop(AC.currentTime + 0.1); break;
+                        case 'correct': osc.frequency.value = 880; gain.gain.setValueAtTime(0.2, AC.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 0.2); osc.start(AC.currentTime); osc.stop(AC.currentTime + 0.2); break;
+                        case 'wrong': osc.frequency.value = 200; gain.gain.setValueAtTime(0.2, AC.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 0.3); osc.start(AC.currentTime); osc.stop(AC.currentTime + 0.3); break;
+                        case 'over': osc.frequency.value = 300; osc.frequency.exponentialRampToValueAtTime(100, AC.currentTime + 0.8); gain.gain.setValueAtTime(0.25, AC.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, AC.currentTime + 0.8); osc.start(AC.currentTime); osc.stop(AC.currentTime + 0.8); break;
+                    }
+                } catch (e) {}
+            }
+
+            // 暴露全局函数
+            window.startGame = startGame;
+            window.startCustomGame = startCustomGame;
+            window.showStartPanel = showStartPanel;
+        })();
+    </script>
+</body>
+</html>
